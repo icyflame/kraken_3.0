@@ -5,6 +5,7 @@ PKG = 'seabotix'
 import roslib; roslib.load_manifest(PKG)
 import serial
 import rospy
+import numpy
 from kraken_msgs.msg import thrusterData6Thruster
 from kraken_msgs.msg import thrusterData4Thruster
 from kraken_msgs.msg import imuData
@@ -49,7 +50,9 @@ def yaw_control(params):
             FIRST_ITERATION = False
 
         prevError = errorP
+        # errorP should be four quadrant arc tangent so numpy.arctan2(sin(errorP),cos(errorP))
         errorP = base_yaw + goal - yaw
+        errorP = numpy.arctan2(sin(errorP),cos(errorP))
 
         print errorP
 
@@ -69,37 +72,39 @@ def yaw_control(params):
 
     err = 0.
 
-    while 1:
+    while (i < 2*N):
 
-        if imu_data_flag:
+     
 
-            thruster6Data = thrusterData6Thruster()
-            thruster4Data = thrusterData4Thruster()
+        thruster6Data = thrusterData6Thruster()
+        thruster4Data = thrusterData4Thruster()
 
-            thruster6Data.data[0] = 0.0
-            thruster6Data.data[1] = 0.0
-            thruster6Data.data[2] = 0.0
-            thruster6Data.data[3] = 0.0
+        thruster6Data.data[0] = 0.0
+        thruster6Data.data[1] = 0.0
+        thruster6Data.data[2] = 0.0
+        thruster6Data.data[3] = 0.0
 
-            thruster6Data.data[4] = Kp*errorP + Kd*errorD + Ki*errorI
-            thruster6Data.data[5] = -1 * thruster6Data.data[4]
+        thruster6Data.data[4] = Kp*errorP + Kd*errorD + Ki*errorI
+        thruster6Data.data[5] = -1 * thruster6Data.data[4]
 
-            thruster4Data.data[0] = thruster6Data.data[0]
-            thruster4Data.data[1] = thruster6Data.data[1]
-            thruster4Data.data[2] = thruster6Data.data[4]
-            thruster4Data.data[3] = thruster6Data.data[5]
+        thruster4Data.data[0] = thruster6Data.data[0]
+        thruster4Data.data[1] = thruster6Data.data[1]
+        thruster4Data.data[2] = thruster6Data.data[4]
+        thruster4Data.data[3] = thruster6Data.data[5]
 
-            # pub4.publish(thruster4Data)
-            pub6.publish(thruster6Data)
+        # pub4.publish(thruster4Data)
+        pub6.publish(thruster6Data)
 
             # Run the twiddle loop 200 times
             # the first 100 times only control step will take place
             # and the next 100 times, the error will be noted down.
-            total_loops += 1
-
+        if imu_data_flag:
+                
+                i += 1
+    
             if i >= N:
-
-                err += errorP
+    
+                    err += (errorP**2)
 
     return float(err) / N
 
