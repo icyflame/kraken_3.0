@@ -62,3 +62,4 @@ CAMERA_FRONT_THEORA_PARAM_UPDATES="/kraken/front_camera/theora/parameter_updates
 CAMERA_FRONT_INFO="/kraken/front_camera_info"
 CAMERA_FRONT_BUOY_IMAGE="/kraken/front_camera/buoy_image"
 CAMERA_CAM_SWITCH="/kraken/camera/camera_switch"
+BUOY_COORDINATES="/kraken/buoy/coordinates"

@@ -14,7 +14,8 @@
   <depend package="blob"/>
   <depend package="image_transport"/>
   <depend package="cv_bridge"/>
-  <depend package="resources"/>
+	<depend package="resources"/>
+	<depend package="kraken_msgs"/>
 
 </package>
 

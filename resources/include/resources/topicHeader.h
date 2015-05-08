@@ -129,5 +129,8 @@ extern const char* PRESENT_POSE;
 // Check topicHeader.cpp for more details
 
 extern const char* ABSOLUTE_RPY;
+
+// IP control tasks, misc topics
+extern const char* BUOY_COORDINATES;
 }
 #endif

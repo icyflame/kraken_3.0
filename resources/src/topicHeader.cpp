@@ -108,4 +108,8 @@ namespace topics{
 	const char* CAMERA_FRONT_BUOY_IMAGE="/kraken/front_camera/buoy_image";
 
 	const char* CAMERA_CAM_SWITCH="/kraken/camera/camera_switch";
+
+	// IP control, switching and misc topics
+	
+	const char* BUOY_COORDINATES="/kraken/buoy/coordinates";
 }
