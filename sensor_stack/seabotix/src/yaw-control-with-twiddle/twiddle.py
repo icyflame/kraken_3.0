@@ -74,8 +74,6 @@ def yaw_control(params):
 
     while (i < 2*N):
 
-     
-
         thruster6Data = thrusterData6Thruster()
         thruster4Data = thrusterData4Thruster()
 
@@ -100,7 +98,7 @@ def yaw_control(params):
             # and the next 100 times, the error will be noted down.
         if imu_data_flag:
                 
-                i += 1
+            i += 1
     
             if i >= N:
     
