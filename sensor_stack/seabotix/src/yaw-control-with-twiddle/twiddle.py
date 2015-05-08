@@ -12,6 +12,8 @@ from kraken_msgs.msg import imuData
 from kraken_msgs.msg import absoluteRPY
 from resources import topicHeader
 
+import numpy # for the function arctan2
+
 PKG = 'seabotix'
 
 N = 100
@@ -32,7 +34,7 @@ def yaw_control(params):
     global errorP
     global errorD
 
-    def imuCB(dataIn):
+    def abrpyCB(abrpy):
         global errorI
         global errorP
         global errorD
@@ -42,7 +44,7 @@ def yaw_control(params):
 
         # yaw = float(raw_input("Enter yaw: "))
 
-        yaw = dataIn.data[2]
+        yaw = abrpy.yaw
 
         if FIRST_ITERATION:
 
@@ -53,16 +55,15 @@ def yaw_control(params):
         # errorP should be four quadrant arc tangent so numpy.arctan2(sin(errorP),cos(errorP))
         errorP = base_yaw + goal - yaw
         errorP = numpy.arctan2(sin(errorP),cos(errorP))
-
         print errorP
-
         errorI = errorP + prevError
         errorD = errorP - prevError
+        print errorP
 
         imu_data_flag = True
 
     rospy.init_node('twiddle_algm_node', anonymous=True)
-    sub = rospy.Subscriber(topicHeader.ABSOLUTE_RPY, absoluteRPY, imuCB)
+    sub = rospy.Subscriber(topicHeader.ABSOLUTE_RPY, absoluteRPY, abrpyCB)
     pub4 = rospy.Publisher(topicHeader.CONTROL_PID_THRUSTER4, thrusterData4Thruster, queue_size = 2)
     pub6 = rospy.Publisher(topicHeader.CONTROL_PID_THRUSTER6, thrusterData6Thruster, queue_size = 2)
 
@@ -93,9 +94,9 @@ def yaw_control(params):
         # pub4.publish(thruster4Data)
         pub6.publish(thruster6Data)
 
-            # Run the twiddle loop 200 times
-            # the first 100 times only control step will take place
-            # and the next 100 times, the error will be noted down.
+        # Run the twiddle loop 200 times
+        # the first 100 times only control step will take place
+        # and the next 100 times, the error will be noted down.
         if imu_data_flag:
                 
             i += 1
@@ -104,14 +105,9 @@ def yaw_control(params):
     
                     err += (errorP**2)
 
-    return float(err) / N
+            imu_data_flag = False
 
-print "entered 1"
-
-def twiddle(tol = 0.001): # Make this tolerance bigger if you are timing out!
-############## ADD CODE BELOW ####################
-
-    print "entered"
+def twiddle(tol = 0.001):
             
     n_params = 3
     dparams = [1.0 for row in range(n_params)]
