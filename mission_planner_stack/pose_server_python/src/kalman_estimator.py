@@ -152,19 +152,51 @@ class matrix:
 
         return self.value[indx-1][indy-1]
 
-def kalman_estimate(x, P, measurement):
+def kalman_estimate(x, P, measurement, u):
 
     dt = 0.1
 
-    F = matrix([[1., 0., dt, 0.], [0., 1., 0., dt], [0., 0., 1., 0.], [0., 0., 0., 1.]])# next state function
-    H = matrix([[0., 0., 1., 0.], [0., 0, 0., 1.]])# measurement function
-    R = matrix([[.1, 0.], [0., .1]])# measurement uncertainty
-    I = matrix([[1., 0., 0., 0.,], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]]) # identity matrix
-    u = matrix([[0.], [0.], [0.], [0.]]) # external motion
-        
+    F = matrix([
+            [1., 0., 0., dt, 0. ,0.], 
+            [0., 1., 0., 0., dt ,0.], 
+            [0., 0., 1., 0. ,0. ,dt], 
+            [0., 0., 0., 1. ,0., 0.],
+            [0., 0., 0., 0. ,1., 0.],
+            [0., 0., 0., 0. ,0., 1.],
+           ])# next state function
+
+    B = matrix([
+            [0.5*(dt**2), 0.         , 0.         ],
+            [0.         , 0.5*(dt**2), 0.         ],
+            [0.         , 0.         , 0.5*(dt**2)],
+            [dt         , 0.         , 0.         ],
+            [0.         , dt         , 0.         ],
+            [0.         , 0.         , dt         ]
+           ]) # control input function
+
+    H = matrix([
+            [0. , 0. , 0. , 1. ,0. ,0.],
+            [0. , 0. , 0. , 0. ,1. ,0.],
+            [0. , 0. , 0. , 0. ,0. ,1.]
+           ]) # mapping function
+
+    R = matrix([[.1 , 0., 0.], 
+            [ 0.,.1 , 0.],
+            [ 0., 0., .1],
+           ])# measurement uncertainty
+
+    I = matrix([
+            [1. , 0. , 0. , 0  ,0. ,0.],
+            [0. , 1. , 0. , 0  ,0. ,0.],
+            [0. , 0. , 1. , 0  ,0. ,0.],
+            [0. , 0. , 0. , 1. ,0. ,0.],
+            [0. , 0. , 0. , 0. ,1. ,0.],
+            [0. , 0. , 0. , 0. ,0. ,1.]
+           ]) # Identity matrix
+
     # prediction
     # x = (F * x) + u
-    x = (F * x)
+    x = (F * x) + (B * u)
     P = F * P * F.transpose()
    
     # measurement update

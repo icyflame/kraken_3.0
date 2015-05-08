@@ -8,6 +8,7 @@ import kraken_msgs
 import kraken_msgs
 from kraken_msgs.msg._absoluteRPY import absoluteRPY
 from kraken_msgs.msg._dvlData import dvlData
+from kraken_msgs.msg._imuData import imuData
 from kraken_msgs.msg._positionData import positionData
 from kraken_msgs.msg._stateData import stateData
 
@@ -15,21 +16,33 @@ from kalman_estimator import *
 
 dt = 0.1
 NUM_VARIABLE_IN_STATE = 4
-INDEX_VEL_X = 3
-INDEX_VEL_Y = 4
+INDEX_VEL_X = 4
+INDEX_VEL_Y = 5
+INDEX_VEL_Z = 6
 CONVERTED_TO_WORLD = False
+ACC_MATRIX_POPULATED = False
 FIRST_ITERATION = True
 base_roll = 0
 base_pitch = 0
 base_yaw = 0
 
 # state = [position-x, position-y, velocity-x, velocity-y]
-state = matrix([[0.0], [0.0], [0.], [0.]]) # initial state (location and velocity)
+state = matrix([[0.], [0.], [0.], [0.], [0.], [0.]]) # initial state (location and velocity)
 statefilled = 2
-measurements = [[0.0, 0.0]]
-P = matrix([[1000., 0., 0., 0.], [0., 1000., 0., 0.], [0., 0., 0, 0.], [0., 0., 0., 0]])# initial uncertainty
+measurements = [[0.0, 0.0, 0.]]
+P = matrix([
+            [1.5  , 0.   , 0.    , 0.  ,0.  ,0. ], 
+            [0.   , 1.5  , 0.    , 0.  ,0.  ,0. ], 
+            [0.   , 0.   , 1.5   , 0.  ,0.  ,0. ],
+            [0.   , 0.   , 0.    , 0.2 ,0.  ,0. ],
+            [0.   , 0.   , 0.    , 0.  ,0.2 ,0. ], 
+            [0.   , 0.   , 0.    , 0.  ,0.  ,0.2]
+           ])# initial uncertainty
+
+u = matrix([[0.], [0.], [0.]])
 
 oldtime = 0
+
 def dvlCallback2(dvl):
 	global oldtime
 	t = dvl.data
@@ -148,23 +161,39 @@ def dvlCallback(dvl):
 
 	vx = dvl.data[3]
 	vy = -1 * dvl.data[4]
+	vz = dvl.data[5]
 
-	# print vx, vy
-
-	roll = dvl.data[0]
-	pitch = dvl.data[1]
-	yaw = dvl.data[2]
+	print vx, vy, vz
 
 	# print "DVL: ", roll, pitch, yaw
 	## End extract step
 
-	this_iteration_measurement = [vx, vy]
+	this_iteration_measurement = [vx, vy, vz]
 
 	state.setvalue(INDEX_VEL_X, 1, vx)
 	state.setvalue(INDEX_VEL_Y, 1, vy)
+	state.setvalue(INDEX_VEL_Z, 1, vz)
 
 	statefilled += 2	
 	measurements.append(this_iteration_measurement)
+
+def imuCallback(imu):
+
+	'''
+	generates the u matrix that is given as an input to the Kalman estimator
+
+	imu -> imuData, kraken_msgs
+	'''
+
+	global u
+
+	ax = imu.data[3]
+	ay = imu.data[4]
+	az = imu.data[5]
+
+	u = matrix([[ax], [ay], [az]])
+
+	ACC_MATRIX_POPULATED = True
 
 def publishStateAndPosition(state_matrix):
 
@@ -201,6 +230,7 @@ def publishStateAndPosition(state_matrix):
 
 absolute_rpy_topic_name = topicHeader.ABSOLUTE_RPY
 dvl_topic_name = topicHeader.SENSOR_DVL
+imu_topic_name = topicHeader.SENSOR_IMU
 publish_state_topic_name = topicHeader.POSE_SERVER_STATE
 publish_position_topic_name = topicHeader.PRESENT_POSE
 
@@ -213,6 +243,7 @@ rospy.init_node('pose_server_python_node', anonymous=True)
 
 rospy.Subscriber(name=absolute_rpy_topic_name, data_class=absoluteRPY, callback=transformCallback)
 rospy.Subscriber(name=dvl_topic_name, data_class=dvlData, callback=dvlCallback)
+rospy.Subscriber(name=imu_topic_name, data_class=imuData, callback=imuCallback)
 
 position_publisher = rospy.Publisher(publish_position_topic_name, positionData, queue_size=10)
 state_publisher = rospy.Publisher(publish_state_topic_name, stateData, queue_size=10)
@@ -225,7 +256,7 @@ while(1):
 
 	if(statefilled >= NUM_VARIABLE_IN_STATE and CONVERTED_TO_WORLD):
 
-		(new_state, new_P) = kalman_estimate(state, P, measurements[-1])
+		(new_state, new_P) = kalman_estimate(state, P, measurements[-1], u)
 
 		state.setvalue(1, 1, new_state.getvalue(1, 1))
 		state.setvalue(2, 1, new_state.getvalue(2, 1))
