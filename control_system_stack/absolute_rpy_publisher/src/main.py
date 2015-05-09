@@ -35,7 +35,7 @@ from kraken_msgs.msg._absoluteRPY import absoluteRPY
 
 def imuCallback(imu):
 
-	global absolute_rpy_publisher
+	global abrpy
 
 	roll  = imu.data[0]
 	pitch = imu.data[1]
@@ -51,7 +51,7 @@ def imuCallback(imu):
 	abrpy.pitch = pitch
 	abrpy.yaw   = yaw
 
-	absolute_rpy_publisher.publish(abrpy)
+	# absolute_rpy_publisher.publish(abrpy)
 
 	# Store this in a message and publish it
 
@@ -60,5 +60,13 @@ absolute_rpy_publisher = rospy.Publisher(name=topicHeader.ABSOLUTE_RPY, data_cla
 rospy.Subscriber(name=topicHeader.SENSOR_IMU, data_class=imuData, callback=imuCallback)
 
 rospy.init_node('absolute_roll_pitch_yaw_publisher')
+
+looprate = rospy.Rate(10)
+
+while not rospy.is_shutdown():
+
+    absolute_rpy_publisher.publish(abrpy)
+
+    looprate.sleep()
 
 rospy.spin()
