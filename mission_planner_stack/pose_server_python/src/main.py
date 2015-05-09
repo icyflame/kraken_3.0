@@ -200,6 +200,7 @@ def imuCallback(imu):
 	print 'entered imu callback'
 
 	global u
+	global ACC_MATRIX_POPULATED
 
 	ax = imu.data[3]
 	ay = imu.data[4]
@@ -269,9 +270,13 @@ state_publisher = rospy.Publisher(publish_state_topic_name, stateData, queue_siz
 
 while(1):
 
+	looprate = rospy.Rate(10)
+
 	# if all the data has been accumulated in the state variable
 
 	if(statefilled >= NUM_VARIABLE_IN_STATE and CONVERTED_TO_WORLD and ACC_MATRIX_POPULATED):
+
+	# if True:
 
 		(new_state, new_P) = kalman_estimate(state, P, measurements[-1], u)
 
@@ -291,5 +296,7 @@ while(1):
 		# new_P.show()
 		
 		P = matrix(new_P.value)
+
+	looprate.sleep()
 
 rospy.spin()
