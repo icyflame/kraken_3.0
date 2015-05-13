@@ -14,6 +14,10 @@ from kraken_msgs.msg._stateData import stateData
 
 from kalman_estimator import *
 
+import time
+
+DEBUG = True
+
 dt = 0.1
 NUM_VARIABLE_IN_STATE = 6
 INDEX_VEL_X = 4
@@ -27,6 +31,7 @@ base_roll = 0
 base_pitch = 0
 base_yaw = 0
 prev_vel = [0., 0., 0.]
+prev_time = time.time()
 
 # state = [position-x, position-y, velocity-x, velocity-y]
 state = matrix([[0.], [0.], [0.], [0.], [0.], [0.]]) # initial state (location and velocity)
@@ -69,10 +74,13 @@ def transformCallback(abrpy):
 	global base_pitch
 	global base_yaw
 
-	print 'entered absolute rpy'
+	if DEBUG:
 
-	vx = state.getvalue(INDEX_VEL_X, 1)
-	vy = state.getvalue(INDEX_VEL_Y, 1)
+		print 'entered absolute rpy'
+
+        vx = measurements[-1][0]
+        vy = measurements[-1][1]
+        vz = measurements[-1][2]
 
 	# yaw, pitch, roll
 
@@ -139,9 +147,15 @@ def transformCallback(abrpy):
 
 	# bodytoworld.show()
 
-	vel_wrt_body = matrix([[vx],[vy],[0.]])
+	vel_wrt_body = matrix([[vx],[vy],[vz]])
 
 	vel_wrt_world = bodytoworld * vel_wrt_body
+
+	state.setvalue(INDEX_VEL_X, 1, vel_wrt_world.getvalue(1, 1))
+	state.setvalue(INDEX_VEL_Y, 1, vel_wrt_world.getvalue(2, 1))
+	state.setvalue(INDEX_VEL_Z, 1, vel_wrt_world.getvalue(3, 1))
+
+	statefilled += 3
 
 	# vel_wrt_world.show()
 
@@ -154,10 +168,15 @@ def dvlCallback(dvl):
 	global measurements
 	global statefilled
 	global FIRST_ITERATION_VEL
+        global u
+        global prev_time
+        global ACC_MATRIX_POPULATED
 
 	# print dvl.data
 
-	# print "Entered DVL callback!"
+	if DEBUG:
+
+		print "Entered DVL callback!"
 
 	## Extract from the variable dvl
 
@@ -166,9 +185,15 @@ def dvlCallback(dvl):
 
 	vx = dvl.data[3]
 	vy = -1 * dvl.data[4]
-	vz = dvl.data[5]
+	vz = -1 * dvl.data[5]
 
-	print vx, vy, vz
+        print "DVL: ", round(vx, 2), round(vy, 2), round(vz, 2)
+
+        if DEBUG:
+
+  	    print "DVL: vz: ", round(vz, 2)
+
+	# print vx, vy, vz
 
 	if FIRST_ITERATION_VEL:
 
@@ -176,17 +201,23 @@ def dvlCallback(dvl):
 		prev_vel = [vx, vy, vz]
 		FIRST_ITERATION_VEL = False
 
+        dt = time.time() - prev_time
+        prev_time = time.time()
+
+        ax = (vx - prev_vel[0]) / dt
+        ay = (vy - prev_vel[1]) / dt
+        az = (vz - prev_vel[2]) / dt
+
+        u = matrix([[ax], [ay], [az]])
+
 	# print "DVL: ", roll, pitch, yaw
 	## End extract step
 
 	this_iteration_measurement = [vx, vy, vz]
 
-	state.setvalue(INDEX_VEL_X, 1, vx)
-	state.setvalue(INDEX_VEL_Y, 1, vy)
-	state.setvalue(INDEX_VEL_Z, 1, vz)
+        ACC_MATRIX_POPULATED = True
 
-	statefilled += 3
-	print "States: ", statefilled
+	# print "States: ", statefilled
 	measurements.append(this_iteration_measurement)
 
 def imuCallback(imu):
@@ -197,7 +228,11 @@ def imuCallback(imu):
 	imu -> imuData, kraken_msgs
 	'''
 
-	print 'entered imu callback'
+        return
+	
+	if DEBUG:
+
+		print 'entered imu callback'
 
 	global u
 	global ACC_MATRIX_POPULATED
@@ -215,12 +250,18 @@ def publishStateAndPosition(state_matrix):
 	global position_publisher
 	global state_publisher
 
-	print "entered publish state-pos"
+	if DEBUG:
+
+		print "entered publish state-pos"
 
 	vx = state_matrix.getvalue(INDEX_VEL_X, 1)
 	vy = state_matrix.getvalue(INDEX_VEL_Y, 1)
+        vz = state_matrix.getvalue(INDEX_VEL_Z, 1)
 	pos_x = state_matrix.getvalue(1, 1)
 	pos_y = state_matrix.getvalue(2, 1)
+	pos_z = state_matrix.getvalue(3, 1)
+
+        print round(pos_x, 2), round(pos_y, 2), round(pos_z, 2), round(vx, 2), round(vy, 2), round(vz, 2)
 
 	present_position = positionData()
 	present_state = stateData()
@@ -248,7 +289,7 @@ def publishStateAndPosition(state_matrix):
 absolute_rpy_topic_name = topicHeader.ABSOLUTE_RPY
 dvl_topic_name = topicHeader.SENSOR_DVL
 imu_topic_name = topicHeader.SENSOR_IMU
-print imu_topic_name
+# print imu_topic_name
 publish_state_topic_name = topicHeader.POSE_SERVER_STATE
 publish_position_topic_name = topicHeader.PRESENT_POSE
 
