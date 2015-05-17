@@ -13,6 +13,7 @@ from kraken_msgs.msg import absoluteRPY
 from resources import topicHeader
 
 import numpy # for the function arctan2
+from math import *
 
 PKG = 'seabotix'
 
@@ -26,6 +27,8 @@ base_yaw = 0.0
 FIRST_ITERATION = True
 imu_data_flag = False
 
+print topicHeader.ABSOLUTE_RPY
+
 def yaw_control(params):
 
     print "entered yaw-control"
@@ -33,6 +36,7 @@ def yaw_control(params):
     global errorI
     global errorP
     global errorD
+    global imu_data_flag
 
     def abrpyCB(abrpy):
         global errorI
@@ -41,6 +45,9 @@ def yaw_control(params):
         global prevError
         global FIRST_ITERATION
         global base_yaw
+        global imu_data_flag
+
+        # print "Entered ABRPY callback"
 
         # yaw = float(raw_input("Enter yaw: "))
 
@@ -55,10 +62,10 @@ def yaw_control(params):
         # errorP should be four quadrant arc tangent so numpy.arctan2(sin(errorP),cos(errorP))
         errorP = base_yaw + goal - yaw
         errorP = numpy.arctan2(sin(errorP),cos(errorP))
-        print errorP
+        # print errorP
         errorI = errorP + prevError
         errorD = errorP - prevError
-        print errorP
+        # print errorP
 
         imu_data_flag = True
 
@@ -72,6 +79,8 @@ def yaw_control(params):
     Kd = params[2]
 
     err = 0.
+
+    i = 0
 
     while (i < 2*N):
 
@@ -92,6 +101,7 @@ def yaw_control(params):
         thruster4Data.data[3] = thruster6Data.data[5]
 
         # pub4.publish(thruster4Data)
+
         pub6.publish(thruster6Data)
 
         # Run the twiddle loop 200 times
@@ -100,17 +110,28 @@ def yaw_control(params):
         if imu_data_flag:
                 
             i += 1
+
+            # print i
     
             if i >= N:
     
                     err += (errorP**2)
 
+                    # print i, "th loop: Current accumulated error: ", err
+
             imu_data_flag = False
+
+    be = err/N;
+
+    print "Best error: ", round(be, 2)
+    # temp = raw_input("Press enter to continue")
+
+    return err / N;
 
 def twiddle(tol = 0.001):
             
     n_params = 3
-    dparams = [1.0 for row in range(n_params)]
+    dparams = [2.5 for row in range(n_params)]
     params  = [0.0 for row in range(n_params)]
 
     best_error = yaw_control(params)
@@ -120,6 +141,7 @@ def twiddle(tol = 0.001):
     while sum(dparams) > tol:
         for i in range(len(params)):
             params[i] += dparams[i]
+            print "params[", i, "]: ", params[i]
             err = yaw_control(params)
             if err < best_error:
                 best_error = err
@@ -134,7 +156,10 @@ def twiddle(tol = 0.001):
                     params[i] += dparams[i]
                     dparams[i] *= 0.9
         n += 1
+
         print 'Twiddle #', n, params, ' -> ', best_error, ' dparams: ', dparams
+
+        temp = raw_input("Press enter to continue")
 
     print ''
     return params
