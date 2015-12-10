@@ -38,7 +38,6 @@ Buoy::Buoy(std::string name) : _it(_n), _s(_n, name, boost::bind(&Buoy::executeC
     }
 
     _kernelDilateErode = getStructuringElement(MORPH_RECT, Size(3,3));
-    //elementEx = getStructuringElement(MORPH_RECT, Size(7,7));
     _finalImage.encoding = "mono8";
     _s.start();
 }
@@ -140,12 +139,6 @@ bool Buoy::detectBuoy()
 {
     if(!_image.empty())
     {
-        // cvtColor(_image, _imageHSV, CV_BGR2HSV);
-        // inRange(_imageHSV,_lowerThreshRed1,_upperThreshRed1, _imageBW);
-        // inRange(_imageHSV,_lowerThreshRed2,_upperThreshRed2, _imageBWRed);
-        // add(_imageBW, _imageBWRed, _imageBW);
-        // inRange(_imageHSV,_lowerThreshGreen,_upperThreshGreen, _imageBWGreen);
-        // add(_imageBW, _imageBWGreen, _imageBW);
         int k;
         imshow("_imagetest1", _image);
 
@@ -154,22 +147,22 @@ bool Buoy::detectBuoy()
             for (int i=0; i< _image.cols; i++)
             {
                 k = _allVals[_image.at<Vec3b>(j,i).val[0]][_image.at<Vec3b>(j,i).val[1]][_image.at<Vec3b>(j,i).val[2]];
-
-                if (k==1)
+                //comment out the colour that you don't need. By default, yellow is used, and red is commented out.
+                if (k==1) //yellow!
                 {
-                    _image.at<Vec3b>(j,i).val[0] = 0;
+                    _image.at<Vec3b>(j,i).val[0] = 255;
                     _image.at<Vec3b>(j,i).val[1] = 255;
                     _image.at<Vec3b>(j,i).val[2] = 255;
                 }
-
-                if (k==0)
+                /*
+                if (k==0) //red!
                 {
-                    _image.at<Vec3b>(j,i).val[0] = 0;
-                    _image.at<Vec3b>(j,i).val[1] = 0;
+                    _image.at<Vec3b>(j,i).val[0] = 255;
+                    _image.at<Vec3b>(j,i).val[1] = 255;
                     _image.at<Vec3b>(j,i).val[2] = 255;
                 }
-
-                if (k==2)
+                */
+                else
                 {
                     _image.at<Vec3b>(j,i).val[0] = 0;
                     _image.at<Vec3b>(j,i).val[1] = 0;
@@ -177,14 +170,11 @@ bool Buoy::detectBuoy()
                 }
             }
         }
-
-        imshow("_imagetest", _image);
         cvtColor(_image, _imageBW, CV_BGR2GRAY);
         imshow("_imageBW", _imageBW);
         waitKey(33);
         medianBlur(_imageBW, _imageBW, 3);
         erode(_imageBW, _imageBW, _kernelDilateErode);
-        //morphologyEx( _imageBW, _imageBW, MORPH_OPEN, elementEx );
         CBlobResult _blobs,_blobsClutter;
         CBlob * _currentBlob;
         IplImage _imageBWipl = _imageBW;
