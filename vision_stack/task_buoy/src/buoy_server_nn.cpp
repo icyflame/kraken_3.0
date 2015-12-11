@@ -12,6 +12,8 @@ Buoy::Buoy(std::string name) : _it(_n), _s(_n, name, boost::bind(&Buoy::executeC
     _sub = _it.subscribe(topics::CAMERA_FRONT_RAW_IMAGE, 1, &Buoy::imageCallBack, this);
     _pub = _it.advertise(topics::CAMERA_FRONT_BUOY_IMAGE, 1);
 
+		ROS_INFO("Loading the matrix file");
+
     fstream f;
     f.open(filepath,ios::in);
 
@@ -41,10 +43,12 @@ Buoy::Buoy(std::string name) : _it(_n), _s(_n, name, boost::bind(&Buoy::executeC
     //elementEx = getStructuringElement(MORPH_RECT, Size(7,7));
     _finalImage.encoding = "mono8";
     _s.start();
+		ROS_INFO("Completed loading the matrix file");
 }
 
 void Buoy::imageCallBack(const sensor_msgs::ImageConstPtr &_msg)
 {
+		ROS_INFO("Entered callback");
     cv_bridge::CvImagePtr _imagePtr;
 
     try
@@ -306,7 +310,7 @@ int main(int argc, char ** argv)
             _allVals[i][j] = new int[256];
         }
     }
-
+		ROS_INFO("Starting node");
     ros::init(argc, argv, "buoy_server");
     Buoy _buoyserver("buoy");
     ros::spin();
