@@ -4,13 +4,13 @@
 
 #include <resources/topicHeader.h>
 
-int ***_allVals;
+int _allVals[256][256][256];
 char* filepath;
 
 Buoy::Buoy(std::string name) : _it(_n), _s(_n, name, boost::bind(&Buoy::executeCB, this, _1), false), _actionName(name)
 {
-    _sub = _it.subscribe(topics::CAMERA_FRONT_RAW_IMAGE, 1, &Buoy::imageCallBack, this);
-    _pub = _it.advertise(topics::CAMERA_FRONT_BUOY_IMAGE, 1);
+    _sub = _it.subscribe(topics::CAMERA_FRONT_RAW_IMAGE, 100, &Buoy::imageCallBack, this);
+    _pub = _it.advertise(topics::CAMERA_FRONT_BUOY_IMAGE, 100);
 
 		ROS_INFO("Loading the matrix file");
 
@@ -54,6 +54,7 @@ void Buoy::imageCallBack(const sensor_msgs::ImageConstPtr &_msg)
     try
     {
         _imagePtr = cv_bridge::toCvCopy(_msg, "bgr8");
+				ROS_INFO("Converted from string to BGR");
     }
     catch (cv_bridge::Exception& e)
     {
@@ -65,7 +66,7 @@ void Buoy::imageCallBack(const sensor_msgs::ImageConstPtr &_msg)
 
 void Buoy::executeCB(const actionmsg::buoyGoalConstPtr &_goal)
 {
-    ros::Rate looprate(10);
+    ros::Rate looprate(5);
     bool success = true;
 
     switch(_goal->order)
@@ -83,6 +84,8 @@ void Buoy::executeCB(const actionmsg::buoyGoalConstPtr &_goal)
                     success = false;
                     break;
                 }
+
+								ROS_INFO("Entered loop one more time!");
 
                 _detected = detectBuoy();
                 _finalImage.image = _imageBW;
@@ -299,6 +302,7 @@ int main(int argc, char ** argv)
 
     filepath = argv[1];
 
+		/*
     _allVals = new int**[256];
 
     for(int i = 0; i < 256; i++)
@@ -310,6 +314,7 @@ int main(int argc, char ** argv)
             _allVals[i][j] = new int[256];
         }
     }
+		*/
 		ROS_INFO("Starting node");
     ros::init(argc, argv, "buoy_server_nn");
     Buoy _buoyserver("buoy_nn");
