@@ -311,8 +311,8 @@ int main(int argc, char ** argv)
         }
     }
 		ROS_INFO("Starting node");
-    ros::init(argc, argv, "buoy_server");
-    Buoy _buoyserver("buoy");
+    ros::init(argc, argv, "buoy_server_nn");
+    Buoy _buoyserver("buoy_nn");
     ros::spin();
     return 0;
 }
